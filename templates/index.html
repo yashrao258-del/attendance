@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Attendance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Subtle glow and loading animations */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        #toast-container {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <!-- Toast Notification Area -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 transform translate-x-full opacity-0">
+        <div id="toast-box" class="flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+            <div id="toast-icon" class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg">
+                <!-- Icon inserted via JS -->
+            </div>
+            <div id="toast-message" class="ml-3 text-sm font-normal">Message</div>
+            <button type="button" onclick="hideToast()" class="ml-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700">
+                <span class="sr-only">Close</span>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Navigation -->
+    <nav class="bg-indigo-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-user-check text-2xl mr-3"></i>
+                    <span class="font-semibold text-xl tracking-tight">Smart Attendance Dashboard</span>
+                </div>
+                <div class="flex items-center">
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-indigo-200 text-sm font-medium flex items-center transition duration-150">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- CONTROLS COLUMN (1/3 width) -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- START ATTENDANCE CARD -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-video text-indigo-500 mr-2"></i> Attendance Camera</h2>
+                    <p class="text-sm text-gray-600 mb-4">Launch the real-time facial recognition camera.</p>
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label for="class-name" class="block text-sm font-medium text-gray-700">Class Name</label>
+                            <input type="text" id="class-name" placeholder="e.g. CS101" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="class-time" class="block text-sm font-medium text-gray-700">Class Start Time (Optional)</label>
+                            <input type="time" id="class-time" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" title="If set, students arriving >20 mins later are marked Late">
+                        </div>
+                    </div>
+                    <button onclick="startAttendance()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 ease-in-out transform hover:-translate-y-1 hover:shadow-lg flex items-center justify-center">
+                        <i class="fas fa-play mr-2"></i> Start Attendance
+                    </button>
+                </div>
+
+                <!-- ADD STUDENT CARD -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-user-plus text-blue-500 mr-2"></i> Add New Student</h2>
+                    <p class="text-sm text-gray-600 mb-4">Register a new face into the system.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="new-student-name" class="block text-sm font-medium text-gray-700">Student Name</label>
+                            <input type="text" id="new-student-name" placeholder="John Doe" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        </div>
+                        <button onclick="addStudent()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200">
+                            Capture Face
+                        </button>
+                    </div>
+                </div>
+
+                <!-- REMOVE STUDENT CARD -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-user-minus text-red-500 mr-2"></i> Remove Student</h2>
+                    <p class="text-sm text-gray-600 mb-4">Delete a student's face data.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <select id="student-dropdown" class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm h-10">
+                                <option value="">Loading students...</option>
+                            </select>
+                        </div>
+                        <button onclick="removeStudent()" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200">
+                            Remove Selected
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- REPORT COLUMN (2/3 width) -->
+            <div class="lg:col-span-2">
+                <div class="glass-card rounded-2xl p-6 h-full flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4 space-y-4 sm:space-y-0">
+                        <h2 class="text-xl font-bold text-gray-800 flex-shrink-0"><i class="fas fa-clipboard-list text-indigo-500 mr-2"></i> Attendance Report</h2>
+                        <div class="flex w-full sm:w-auto items-center space-x-2">
+                            <select id="report-class-dropdown" onchange="loadAttendance()" class="block w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option value="General">General</option>
+                            </select>
+                            <button onclick="downloadExcel()" class="text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-medium py-2 px-3 rounded-lg transition duration-150 flex items-center shadow-sm" title="Download Excel">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button onclick="loadAttendance()" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 font-medium py-2 px-3 rounded-lg transition duration-150 flex items-center shadow-sm" title="Refresh Data">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto flex-grow rounded-lg border border-gray-200 shadow-sm">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-10 text-center text-gray-500">
+                                        Click "Refresh Data" to load attendance records.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // ON LOAD
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudentDropdown();
+            loadReportClassesDropdown();
+            loadAttendance();
+        });
+
+        // TOAST NOTIFICATIONS
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const msgEl = document.getElementById('toast-message');
+            const iconEl = document.getElementById('toast-icon');
+            
+            msgEl.textContent = message;
+            
+            if (type === 'success') {
+                iconEl.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+                iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg';
+            } else {
+                iconEl.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500"></i>';
+                iconEl.className = 'inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg';
+            }
+
+            container.classList.remove('translate-x-full', 'opacity-0');
+            
+            setTimeout(() => {
+                hideToast();
+            }, 5000);
+        }
+
+        function hideToast() {
+            const container = document.getElementById('toast-container');
+            container.classList.add('translate-x-full', 'opacity-0');
+        }
+
+        // START ATTENDANCE
+        async function startAttendance() {
+            const className = document.getElementById('class-name').value.trim() || 'General';
+            const classTime = document.getElementById('class-time').value;
+
+            showToast("Launching Camera for " + className + "...", "success");
+            try {
+                const res = await fetch('/api/start_attendance', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ class_name: className, class_time: classTime })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message, "success");
+                    loadReportClassesDropdown(); // Refresh dropdown in case new class created
+                } else {
+                    showToast(data.message, "error");
+                }
+            } catch (err) {
+                showToast("Failed to connect to server.", "error");
+            }
+        }
+
+        // ADD STUDENT
+        async function addStudent() {
+            const input = document.getElementById('new-student-name');
+            const name = input.value.trim();
+            if (!name) {
+                showToast("Please enter a student name.", "error");
+                return;
+            }
+
+            showToast("Opening capture window for " + name + "...", "success");
+            try {
+                const res = await fetch('/api/add_student', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message, "success");
+                    input.value = '';
+                    setTimeout(loadStudentDropdown, 2000);
+                } else {
+                    showToast(data.message, "error");
+                }
+            } catch (err) {
+                showToast("Failed to connect to server.", "error");
+            }
+        }
+
+        // LOAD REPORT CLASSES DROPDOWN
+        async function loadReportClassesDropdown() {
+            try {
+                const res = await fetch('/api/get_classes');
+                const data = await res.json();
+                const select = document.getElementById('report-class-dropdown');
+                const currentVal = select.value;
+                select.innerHTML = '';
+                
+                if (data.classes && data.classes.length > 0) {
+                    data.classes.forEach(cls => {
+                        const opt = document.createElement('option');
+                        opt.value = cls;
+                        opt.textContent = cls;
+                        select.appendChild(opt);
+                    });
+                    if (data.classes.includes(currentVal)) {
+                        select.value = currentVal;
+                    }
+                } else {
+                    select.innerHTML = '<option value="General">General</option>';
+                }
+            } catch (err) {
+                console.error("Failed to load classes.", err);
+            }
+        }
+
+        // LOAD STUDENT DROPDOWN
+        async function loadStudentDropdown() {
+            try {
+                const res = await fetch('/api/get_students');
+                const data = await res.json();
+                const select = document.getElementById('student-dropdown');
+                select.innerHTML = '<option value="">Select a student...</option>';
+                
+                if (data.students && data.students.length > 0) {
+                    data.students.forEach(student => {
+                        const opt = document.createElement('option');
+                        opt.value = student;
+                        opt.textContent = student;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No students found</option>';
+                }
+            } catch (err) {
+                console.error("Failed to load students.", err);
+            }
+        }
+
+        // REMOVE STUDENT
+        async function removeStudent() {
+            const select = document.getElementById('student-dropdown');
+            const name = select.value;
+            if (!name) {
+                showToast("Please select a student to remove.", "error");
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to remove ${name}'s face data?`)) return;
+
+            try {
+                const res = await fetch('/api/remove_student', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message, "success");
+                    loadStudentDropdown();
+                } else {
+                    showToast(data.message, "error");
+                }
+            } catch (err) {
+                showToast("Failed to connect to server.", "error");
+            }
+        }
+
+        // DOWNLOAD EXCEL
+        function downloadExcel() {
+            const dropdown = document.getElementById('report-class-dropdown');
+            const className = dropdown ? dropdown.value : 'General';
+            window.location.href = '/download_attendance?class_name=' + encodeURIComponent(className);
+        }
+
+        // LOAD ATTENDANCE
+        async function loadAttendance() {
+            const tbody = document.getElementById('attendance-tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">Loading...</td></tr>';
+            
+            const dropdown = document.getElementById('report-class-dropdown');
+            const className = dropdown ? dropdown.value : 'General';
+
+            try {
+                const res = await fetch('/api/get_attendance?class_name=' + encodeURIComponent(className));
+                const data = await res.json();
+                
+                if (data.data && data.data.length > 0) {
+                    tbody.innerHTML = '';
+                    // Display latest first
+                    const reversedData = [...data.data].reverse();
+                    
+                    reversedData.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-50";
+                        
+                        let statusColor = 'bg-gray-100 text-gray-800';
+                        if (row.Status === 'Present') statusColor = 'bg-green-100 text-green-800';
+                        else if (row.Status === 'Late') statusColor = 'bg-yellow-100 text-yellow-800';
+                        else if (row.Status === 'Absent') statusColor = 'bg-red-100 text-red-800';
+                        
+                        tr.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.Date || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.Name || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.Time || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">
+                                    ${row.Status || 'Unknown'}
+                                </span>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    showToast("Attendance updated.", "success");
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No attendance data found.</td></tr>';
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-sm text-red-500">Failed to load data.</td></tr>';
+                showToast("Failed to fetch report.", "error");
+            }
+        }
+    </script>
+</body>
+</html>
